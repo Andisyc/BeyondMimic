@@ -8,7 +8,7 @@
 """
 
 """Launch Isaac Sim Simulator first."""
-
+import os, sys
 import argparse
 import numpy as np
 
@@ -16,7 +16,7 @@ from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Replay motion from csv file and output to npz file.")
-parser.add_argument("--input_file", type=str, required=True, help="The path to the input motion csv file.")
+parser.add_argument("--input_file", type=str, default=None, help="The path to the input motion csv file.") # required=True
 parser.add_argument("--input_fps", type=int, default=30, help="The fps of the input motion.")
 parser.add_argument(
     "--frame_range",
@@ -28,11 +28,12 @@ parser.add_argument(
         " loaded."
     ),
 )
-parser.add_argument("--output_name", type=str, required=True, help="The name of the motion npz file.")
+parser.add_argument("--output_name", type=str, default=None, help="The name of the motion npz file.") # required=True
 parser.add_argument("--output_fps", type=int, default=50, help="The fps of the output motion.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
+
 # parse the arguments
 args_cli = parser.parse_args()
 
@@ -215,8 +216,12 @@ class MotionLoader:
         return state, reset_flag
 
 
-def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joint_names: list[str]):
+def run_simulator(input_path, output_path, sim: sim_utils.SimulationContext, scene: InteractiveScene, joint_names: list[str], 
+                  ):
     """Runs the simulation loop."""
+    args_cli.input_file = input_path
+    args_cli.output_name = output_path
+
     # Load motion
     motion = MotionLoader(
         motion_file=args_cli.input_file,
@@ -225,6 +230,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
         device=sim.device,
         frame_range=args_cli.frame_range,
     )
+
+    # print("after MotionLoader")
 
     # Extract scene entities
     robot = scene["robot"]
@@ -243,8 +250,12 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
     file_saved = False
     # --------------------------------------------------------------------------
 
+    # print("before simulation while")
+
+    # exit_flag = False
+
     # Simulation loop
-    while simulation_app.is_running():
+    while simulation_app.is_running(): #  and not exit_flag:
         (
             (
                 motion_base_pos,
@@ -257,6 +268,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
             reset_flag,
         ) = motion.get_next_state()
 
+        # print("before set root state")
+
         # set root state
         root_states = robot.data.default_root_state.clone()
         root_states[:, :3] = motion_base_pos
@@ -266,6 +279,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
         root_states[:, 10:] = motion_base_ang_vel
         robot.write_root_state_to_sim(root_states)
 
+        # print("before set joint state")
+
         # set joint state
         joint_pos = robot.data.default_joint_pos.clone()
         joint_vel = robot.data.default_joint_vel.clone()
@@ -274,6 +289,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
         robot.write_joint_state_to_sim(joint_pos, joint_vel)
         sim.render()  # We don't want physic (sim.step())
         scene.update(sim.get_physics_dt())
+
+        # print("before sim.set camera view")
 
         pos_lookat = root_states[0, :3].cpu().numpy()
         sim.set_camera_view(pos_lookat + np.array([2.0, 2.0, 0.5]), pos_lookat)
@@ -285,6 +302,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
             log["body_quat_w"].append(robot.data.body_quat_w[0, :].cpu().numpy().copy())
             log["body_lin_vel_w"].append(robot.data.body_lin_vel_w[0, :].cpu().numpy().copy())
             log["body_ang_vel_w"].append(robot.data.body_ang_vel_w[0, :].cpu().numpy().copy())
+
+        # print(f"before save npz: reset_flag: {reset_flag}, file_saved: {file_saved}")
 
         if reset_flag and not file_saved:
             file_saved = True
@@ -298,34 +317,44 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
             ):
                 log[k] = np.stack(log[k], axis=0)
 
-            np.savez("/tmp/motion.npz", **log)
+            print(f"[INFO]: Motion saved to local file: {args_cli.output_name}")
+            np.savez(f"{args_cli.output_name}", **log)
 
-            import wandb
+            # exit_flag = True
 
-            COLLECTION = args_cli.output_name
-            run = wandb.init(project="csv_to_npz", name=COLLECTION)
-            print(f"[INFO]: Logging motion to wandb: {COLLECTION}")
-            REGISTRY = "motions"
-            logged_artifact = run.log_artifact(artifact_or_path="/tmp/motion.npz", name=COLLECTION, type=REGISTRY)
-            run.link_artifact(artifact=logged_artifact, target_path=f"wandb-registry-{REGISTRY}/{COLLECTION}")
-            print(f"[INFO]: Motion saved to wandb registry: {REGISTRY}/{COLLECTION}")
+            return
+
+            # import wandb
+            # COLLECTION = args_cli.output_name
+            # run = wandb.init(project="csv_to_npz", name=COLLECTION)
+            # print(f"[INFO]: Logging motion to wandb: {COLLECTION}")
+            # REGISTRY = "motions"
+            # logged_artifact = run.log_artifact(artifact_or_path="/tmp/motion.npz", name=COLLECTION, type=REGISTRY)
+            # run.link_artifact(artifact=logged_artifact, target_path=f"wandb-registry-{REGISTRY}/{COLLECTION}")
+            # print(f"[INFO]: Motion saved to wandb registry: {REGISTRY}/{COLLECTION}")
+        
+    
 
 
-def main():
+def main(input_path, output_path):
     """Main function."""
     # Load kit helper
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
     sim_cfg.dt = 1.0 / args_cli.output_fps
     sim = SimulationContext(sim_cfg)
+
     # Design scene
     scene_cfg = ReplayMotionsSceneCfg(num_envs=1, env_spacing=2.0)
     scene = InteractiveScene(scene_cfg)
+
     # Play the simulator
     sim.reset()
+
     # Now we are ready!
     print("[INFO]: Setup complete...")
+
     # Run the simulator
-    run_simulator(
+    run_simulator(input_path, output_path,
         sim,
         scene,
         joint_names=[
@@ -361,9 +390,26 @@ def main():
         ],
     )
 
+    print("do we reach after run_simulator")
+
+    return
+
 
 if __name__ == "__main__":
+# def main_control(input_path, output_path):
+    input_path = '/home/chengyuxuan/BeyondMimic/kunkun.csv'
+    output_path = '/home/chengyuxuan/BeyondMimic/kunkun.npz'
+
     # run the main function
-    main()
+    main(input_path, output_path)
+
+    print("do we reach after main?")
+
     # close sim app
     simulation_app.close()
+
+    print("do we reach after close?")
+
+    os._exit(0)
+
+    # return 0

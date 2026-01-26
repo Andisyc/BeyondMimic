@@ -12,14 +12,13 @@ import cli_args  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
+parser.add_argument("--video", action="store_true", default=True, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
-parser.add_argument(
-    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
-)
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument("--motion_file", type=str, default=None, help="Path to the motion file.")
+parser.add_argument("--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations.")
+parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to simulate.")
+parser.add_argument("--task", type=str, default='Tracking-Flat-G1-v0', help="Name of the task.")
+parser.add_argument("--motion_file", type=str, default='./kunkun.npz', help="Path to the motion file.")
+
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -73,42 +72,46 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     log_root_path = os.path.abspath(log_root_path)
 
     if args_cli.wandb_path:
-        import wandb
+        # import wandb
+        # run_path = args_cli.wandb_path
+        # api = wandb.Api()
+        # if "model" in args_cli.wandb_path:
+        #     run_path = "/".join(args_cli.wandb_path.split("/")[:-1])
+        # wandb_run = api.run(run_path)
 
-        run_path = args_cli.wandb_path
-
-        api = wandb.Api()
-        if "model" in args_cli.wandb_path:
-            run_path = "/".join(args_cli.wandb_path.split("/")[:-1])
-        wandb_run = api.run(run_path)
         # loop over files in the run
-        files = [file.name for file in wandb_run.files() if "model" in file.name]
+        # files = [file.name for file in wandb_run.files() if "model" in file.name]
+
         # files are all model_xxx.pt find the largest filename
-        if "model" in args_cli.wandb_path:
-            file = args_cli.wandb_path.split("/")[-1]
-        else:
-            file = max(files, key=lambda x: int(x.split("_")[1].split(".")[0]))
+        # if "model" in args_cli.wandb_path:
+        #     file = args_cli.wandb_path.split("/")[-1]
+        # else:
+        #     file = max(files, key=lambda x: int(x.split("_")[1].split(".")[0]))
 
-        wandb_file = wandb_run.file(str(file))
-        wandb_file.download("./logs/rsl_rl/temp", replace=True)
+        # wandb_file = wandb_run.file(str(file))
+        # wandb_file.download("./logs/rsl_rl/temp", replace=True)
 
-        print(f"[INFO]: Loading model checkpoint from: {run_path}/{file}")
-        resume_path = f"./logs/rsl_rl/temp/{file}"
+        # print(f"[INFO]: Loading model checkpoint from: {run_path}/{file}")
+        # resume_path = f"./logs/rsl_rl/temp/{file}"
 
-        if args_cli.motion_file is not None:
-            print(f"[INFO]: Using motion file from CLI: {args_cli.motion_file}")
-            env_cfg.commands.motion.motion_file = args_cli.motion_file
+        # if args_cli.motion_file is not None:
+        #     print(f"[INFO]: Using motion file from CLI: {args_cli.motion_file}")
+        #     env_cfg.commands.motion.motion_file = args_cli.motion_file
 
-        art = next((a for a in wandb_run.used_artifacts() if a.type == "motions"), None)
-        if art is None:
-            print("[WARN] No model artifact found in the run.")
-        else:
-            env_cfg.commands.motion.motion_file = str(pathlib.Path(art.download()) / "motion.npz")
+        # art = next((a for a in wandb_run.used_artifacts() if a.type == "motions"), None)
+        # if art is None:
+        #     print("[WARN] No model artifact found in the run.")
+        # else:
+        #     env_cfg.commands.motion.motion_file = str(pathlib.Path(art.download()) / "motion.npz")
+
+        resume_path = './rsl_rl/g1_flat/2026-01-23_15-55-27/model_16000.pt'
+        env_cfg.commands.motion.motion_file = './kunkun.npz'
 
     else:
         print(f"[INFO] Loading experiment from directory: {log_root_path}")
         resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+        env_cfg.commands.motion.motion_file = './kunkun.npz'
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
@@ -143,24 +146,27 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # export policy to onnx/jit
     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-
     export_motion_policy_as_onnx(
         env.unwrapped,
         ppo_runner.alg.policy,
         normalizer=ppo_runner.obs_normalizer,
         path=export_model_dir,
-        filename="policy.onnx",
-    )
+        filename="policy.onnx")
     attach_onnx_metadata(env.unwrapped, args_cli.wandb_path if args_cli.wandb_path else "none", export_model_dir)
+
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
+
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
             actions = policy(obs)
+            if len(actions.shape) == 1:
+                actions = actions.unsqueeze(0)
+            
             # env stepping
             obs, _, _, _ = env.step(actions)
         if args_cli.video:
