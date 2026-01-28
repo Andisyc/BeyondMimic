@@ -216,11 +216,8 @@ class MotionLoader:
         return state, reset_flag
 
 
-def run_simulator(input_path, output_path, sim: sim_utils.SimulationContext, scene: InteractiveScene, joint_names: list[str], 
-                  ):
+def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joint_names: list[str]):
     """Runs the simulation loop."""
-    args_cli.input_file = input_path
-    args_cli.output_name = output_path
 
     # Load motion
     motion = MotionLoader(
@@ -333,10 +330,8 @@ def run_simulator(input_path, output_path, sim: sim_utils.SimulationContext, sce
             # run.link_artifact(artifact=logged_artifact, target_path=f"wandb-registry-{REGISTRY}/{COLLECTION}")
             # print(f"[INFO]: Motion saved to wandb registry: {REGISTRY}/{COLLECTION}")
         
-    
 
-
-def main(input_path, output_path):
+def main():
     """Main function."""
     # Load kit helper
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
@@ -354,7 +349,7 @@ def main(input_path, output_path):
     print("[INFO]: Setup complete...")
 
     # Run the simulator
-    run_simulator(input_path, output_path,
+    run_simulator(
         sim,
         scene,
         joint_names=[
@@ -390,25 +385,19 @@ def main(input_path, output_path):
         ],
     )
 
-    print("do we reach after run_simulator")
-
     return
 
 
 if __name__ == "__main__":
 # def main_control(input_path, output_path):
-    input_path = '/home/chengyuxuan/BeyondMimic/kunkun.csv'
-    output_path = '/home/chengyuxuan/BeyondMimic/kunkun.npz'
 
     # run the main function
-    main(input_path, output_path)
-
-    print("do we reach after main?")
+    main()
 
     # close sim app
     simulation_app.close()
 
-    print("do we reach after close?")
+    print(f"[INFO]: csv convert to npz completed, ctrl+c to quit")
 
     os._exit(0)
 
