@@ -25,6 +25,7 @@ parser.add_argument("--task", type=str, default='Tracking-Flat-G1-v0', help="Nam
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--registry_name", type=str, default="andylaw", help="The name of the wand registry.") # required=True, 
+parser.add_argument("--motion_file", type=str, default='./motion/bow-shallow.npz')
 
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
@@ -97,7 +98,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # api = wandb.Api()
     # artifact = api.artifact(registry_name)
     # env_cfg.commands.motion.motion_file = str(pathlib.Path(artifact.download()) / "motion.npz")
-    env_cfg.commands.motion.motion_file = './fistoffury.npz'
+    env_cfg.commands.motion.motion_file = args_cli.motion_file
 
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)

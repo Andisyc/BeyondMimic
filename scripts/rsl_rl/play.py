@@ -17,7 +17,8 @@ parser.add_argument("--video_length", type=int, default=200, help="Length of the
 parser.add_argument("--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations.")
 parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default='Tracking-Flat-G1-v0', help="Name of the task.")
-parser.add_argument("--motion_file", type=str, default='./fistoffury.npz', help="Path to the motion file.")
+parser.add_argument("--motion_file", type=str, default='./motion/wave-single.npz', help="Path to the motion file.")
+parser.add_argument("--resume_path", type=str, default='./rsl_rl/g1_flat/wave-single/model_16000.pt')
 
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
@@ -104,18 +105,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         # else:
         #     env_cfg.commands.motion.motion_file = str(pathlib.Path(art.download()) / "motion.npz")
 
-        resume_path = './rsl_rl/g1_flat/2026-01-27_17-31-58/model_16000.pt'
-        env_cfg.commands.motion.motion_file = './fistoffury.npz'
+        resume_path = args_cli.resume_path
+        env_cfg.commands.motion.motion_file = args_cli.motion_file
+        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
 
     else:
         print(f"[INFO] Loading experiment from directory: {log_root_path}")
-        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+        # resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+        resume_path = log_root_path + '/wave-single/model_16000.pt'
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-        env_cfg.commands.motion.motion_file = './fistoffury.npz'
+        env_cfg.commands.motion.motion_file = args_cli.motion_file
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
-
     log_dir = os.path.dirname(resume_path)
 
     # wrap for video recording
@@ -182,5 +184,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 if __name__ == "__main__":
     # run the main function
     main()
+
     # close sim app
     simulation_app.close()
