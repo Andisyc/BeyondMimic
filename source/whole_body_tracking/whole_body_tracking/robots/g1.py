@@ -1,3 +1,5 @@
+import copy
+
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
@@ -181,15 +183,71 @@ G1_CYLINDER_CFG = ArticulationCfg(
     },
 )
 
-G1_ACTION_SCALE = {}
-for a in G1_CYLINDER_CFG.actuators.values():
-    e = a.effort_limit_sim
-    s = a.stiffness
-    names = a.joint_names_expr
-    if not isinstance(e, dict):
-        e = {n: e for n in names}
-    if not isinstance(s, dict):
-        s = {n: s for n in names}
-    for n in names:
-        if n in e and n in s and s[n]:
-            G1_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
+G1_23DOF_JOINT_NAMES = [
+    "left_hip_pitch_joint",
+    "left_hip_roll_joint",
+    "left_hip_yaw_joint",
+    "left_knee_joint",
+    "left_ankle_pitch_joint",
+    "left_ankle_roll_joint",
+    "right_hip_pitch_joint",
+    "right_hip_roll_joint",
+    "right_hip_yaw_joint",
+    "right_knee_joint",
+    "right_ankle_pitch_joint",
+    "right_ankle_roll_joint",
+    "waist_yaw_joint",
+    "left_shoulder_pitch_joint",
+    "left_shoulder_roll_joint",
+    "left_shoulder_yaw_joint",
+    "left_elbow_joint",
+    "left_wrist_roll_joint",
+    "right_shoulder_pitch_joint",
+    "right_shoulder_roll_joint",
+    "right_shoulder_yaw_joint",
+    "right_elbow_joint",
+    "right_wrist_roll_joint",
+]
+
+
+# Reuse the verified 29-DOF gains while removing joints absent from the
+# official 23-DOF URDF. The 29-DOF config itself remains unchanged.
+G1_23DOF_CYLINDER_CFG = copy.deepcopy(G1_CYLINDER_CFG)
+G1_23DOF_CYLINDER_CFG.spawn.asset_path = f"{ASSET_DIR}/unitree_description/urdf/g1_23dof/main.urdf"
+G1_23DOF_CYLINDER_CFG.actuators.pop("waist")
+arms_23dof = G1_23DOF_CYLINDER_CFG.actuators["arms"]
+arms_23dof.joint_names_expr = [
+    ".*_shoulder_pitch_joint",
+    ".*_shoulder_roll_joint",
+    ".*_shoulder_yaw_joint",
+    ".*_elbow_joint",
+    ".*_wrist_roll_joint",
+]
+for actuator_field in ("effort_limit_sim", "velocity_limit_sim", "stiffness", "damping", "armature"):
+    values = getattr(arms_23dof, actuator_field)
+    if isinstance(values, dict):
+        setattr(
+            arms_23dof,
+            actuator_field,
+            {key: value for key, value in values.items() if "wrist_pitch" not in key and "wrist_yaw" not in key},
+        )
+
+
+def _build_action_scale(robot_cfg: ArticulationCfg) -> dict[str, float]:
+    action_scale = {}
+    for actuator_cfg in robot_cfg.actuators.values():
+        effort_limits = actuator_cfg.effort_limit_sim
+        stiffness = actuator_cfg.stiffness
+        joint_names = actuator_cfg.joint_names_expr
+        if not isinstance(effort_limits, dict):
+            effort_limits = {name: effort_limits for name in joint_names}
+        if not isinstance(stiffness, dict):
+            stiffness = {name: stiffness for name in joint_names}
+        for name in joint_names:
+            if name in effort_limits and name in stiffness and stiffness[name]:
+                action_scale[name] = 0.25 * effort_limits[name] / stiffness[name]
+    return action_scale
+
+
+G1_ACTION_SCALE = _build_action_scale(G1_CYLINDER_CFG)
+G1_23DOF_ACTION_SCALE = _build_action_scale(G1_23DOF_CYLINDER_CFG)

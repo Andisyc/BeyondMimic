@@ -19,6 +19,13 @@ parser = argparse.ArgumentParser(description="Replay motion from csv file and ou
 parser.add_argument("--input_file", type=str, default=None, help="The path to the input motion csv file.") # required=True
 parser.add_argument("--input_fps", type=int, default=30, help="The fps of the input motion.")
 parser.add_argument(
+    "--robot",
+    type=str,
+    default="g1",
+    choices=("g1", "g1_23dof"),
+    help="Robot platform and canonical joint order used for replay.",
+)
+parser.add_argument(
     "--frame_range",
     nargs=2,
     type=int,
@@ -56,27 +63,27 @@ from isaaclab.utils.math import axis_angle_from_quat, quat_conjugate, quat_mul, 
 ##
 # Pre-defined configs
 ##
-from whole_body_tracking.robots.g1 import G1_CYLINDER_CFG
+from whole_body_tracking.robots.robot_registry import get_robot_platform
 
 
-@configclass
-class ReplayMotionsSceneCfg(InteractiveSceneCfg):
-    """Configuration for a replay motions scene."""
+def create_replay_scene_cfg(robot_cfg: ArticulationCfg):
+    """Create a replay scene with the selected robot articulation."""
 
-    # ground plane
-    ground = AssetBaseCfg(prim_path="/World/defaultGroundPlane", spawn=sim_utils.GroundPlaneCfg())
+    @configclass
+    class ReplayMotionsSceneCfg(InteractiveSceneCfg):
+        """Configuration for a replay motions scene."""
 
-    # lights
-    sky_light = AssetBaseCfg(
-        prim_path="/World/skyLight",
-        spawn=sim_utils.DomeLightCfg(
-            intensity=750.0,
-            texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
-        ),
-    )
+        ground = AssetBaseCfg(prim_path="/World/defaultGroundPlane", spawn=sim_utils.GroundPlaneCfg())
+        sky_light = AssetBaseCfg(
+            prim_path="/World/skyLight",
+            spawn=sim_utils.DomeLightCfg(
+                intensity=750.0,
+                texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
+            ),
+        )
+        robot: ArticulationCfg = robot_cfg.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
-    # articulation
-    robot: ArticulationCfg = G1_CYLINDER_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    return ReplayMotionsSceneCfg
 
 
 class MotionLoader:
@@ -233,6 +240,11 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
     # Extract scene entities
     robot = scene["robot"]
     robot_joint_indexes = robot.find_joints(joint_names, preserve_order=True)[0]
+    if motion.motion_dof_poss.shape[1] != len(joint_names):
+        raise ValueError(
+            f"Motion DOF width ({motion.motion_dof_poss.shape[1]}) does not match "
+            f"{args_cli.robot} joint count ({len(joint_names)}). Use the matching GMR CSV."
+        )
 
     # ------- data logger -------------------------------------------------------
     log = {
@@ -333,13 +345,14 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, joi
 
 def main():
     """Main function."""
+    robot_spec = get_robot_platform(args_cli.robot)
     # Load kit helper
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
     sim_cfg.dt = 1.0 / args_cli.output_fps
     sim = SimulationContext(sim_cfg)
 
     # Design scene
-    scene_cfg = ReplayMotionsSceneCfg(num_envs=1, env_spacing=2.0)
+    scene_cfg = create_replay_scene_cfg(robot_spec.cfg)(num_envs=1, env_spacing=2.0)
     scene = InteractiveScene(scene_cfg)
 
     # Play the simulator
@@ -352,37 +365,7 @@ def main():
     run_simulator(
         sim,
         scene,
-        joint_names=[
-            "left_hip_pitch_joint",
-            "left_hip_roll_joint",
-            "left_hip_yaw_joint",
-            "left_knee_joint",
-            "left_ankle_pitch_joint",
-            "left_ankle_roll_joint",
-            "right_hip_pitch_joint",
-            "right_hip_roll_joint",
-            "right_hip_yaw_joint",
-            "right_knee_joint",
-            "right_ankle_pitch_joint",
-            "right_ankle_roll_joint",
-            "waist_yaw_joint",
-            "waist_roll_joint",
-            "waist_pitch_joint",
-            "left_shoulder_pitch_joint",
-            "left_shoulder_roll_joint",
-            "left_shoulder_yaw_joint",
-            "left_elbow_joint",
-            "left_wrist_roll_joint",
-            "left_wrist_pitch_joint",
-            "left_wrist_yaw_joint",
-            "right_shoulder_pitch_joint",
-            "right_shoulder_roll_joint",
-            "right_shoulder_yaw_joint",
-            "right_elbow_joint",
-            "right_wrist_roll_joint",
-            "right_wrist_pitch_joint",
-            "right_wrist_yaw_joint",
-        ],
+        joint_names=robot_spec.joint_names,
     )
 
     return
