@@ -16,7 +16,17 @@ from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Replay converted motions.")
-parser.add_argument("--registry_name", type=str, required=True, help="The name of the wand registry.")
+parser.add_argument("--registry_name", type=str, default=None, help="The name of the wand registry (optional if --motion_file is provided).")
+parser.add_argument("--motion_file", type=str, default=None, help="Path to local motion .npz file (bypasses wandb download).")
+parser.add_argument(
+    "--robot",
+    type=str,
+    default="g1",
+    choices=("g1", "g1_23dof"),
+    help="Robot platform matching the motion file.",
+)
+parser.add_argument("--record_video", action="store_true", help="Record video of the replay.")
+parser.add_argument("--video_path", type=str, default="replay.mp4", help="Path to save the recorded video.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -39,7 +49,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 ##
 # Pre-defined configs
 ##
-from whole_body_tracking.robots.g1 import G1_CYLINDER_CFG
+from whole_body_tracking.robots.robot_registry import get_robot_platform
 from whole_body_tracking.tasks.tracking.mdp import MotionLoader
 
 
@@ -58,7 +68,7 @@ class ReplayMotionsSceneCfg(InteractiveSceneCfg):
     )
 
     # articulation
-    robot: ArticulationCfg = G1_CYLINDER_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = get_robot_platform(args_cli.robot).cfg.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
 
 def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
@@ -67,16 +77,24 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     # Define simulation stepping
     sim_dt = sim.get_physics_dt()
 
-    registry_name = args_cli.registry_name
-    if ":" not in registry_name:  # Check if the registry name includes alias, if not, append ":latest"
-        registry_name += ":latest"
-    import pathlib
+    # Load motion file: local path or from wandb registry
+    if args_cli.motion_file is not None:
+        motion_file = args_cli.motion_file
+        print(f"[INFO] Loading motion from local file: {motion_file}")
+    elif args_cli.registry_name is not None:
+        registry_name = args_cli.registry_name
+        if ":" not in registry_name:  # Check if the registry name includes alias, if not, append ":latest"
+            registry_name += ":latest"
+        import pathlib
 
-    import wandb
+        import wandb
 
-    api = wandb.Api()
-    artifact = api.artifact(registry_name)
-    motion_file = str(pathlib.Path(artifact.download()) / "motion.npz")
+        api = wandb.Api()
+        artifact = api.artifact(registry_name)
+        motion_file = str(pathlib.Path(artifact.download()) / "motion.npz")
+        print(f"[INFO] Downloaded motion from wandb: {motion_file}")
+    else:
+        raise ValueError("Either --motion_file or --registry_name must be provided")
 
     motion = MotionLoader(
         motion_file,
@@ -84,6 +102,20 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         sim.device,
     )
     time_steps = torch.zeros(scene.num_envs, dtype=torch.long, device=sim.device)
+
+    # Video recording setup
+    video_writer = None
+    if args_cli.record_video:
+        import cv2
+        import omni.kit.viewport.utility
+
+        viewport_api = omni.kit.viewport.utility.get_active_viewport()
+        render_product = viewport_api.get_render_product_path()
+        width, height = viewport_api.get_texture_resolution()
+
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        video_writer = cv2.VideoWriter(args_cli.video_path, fourcc, 30, (width, height))
+        print(f"[INFO] Recording video to {args_cli.video_path} ({width}x{height} @ 30fps)")
 
     # Simulation loop
     while simulation_app.is_running():
@@ -105,6 +137,22 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
 
         pos_lookat = root_states[0, :3].cpu().numpy()
         sim.set_camera_view(pos_lookat + np.array([2.0, 2.0, 0.5]), pos_lookat)
+
+        # Capture frame for video
+        if video_writer is not None:
+            import omni.kit.capture
+
+            capture = omni.kit.capture.CaptureExtension.get_instance()
+            frame_data = capture.capture(render_product)
+            if frame_data is not None:
+                # Convert to BGR for OpenCV
+                frame_bgr = cv2.cvtColor(frame_data, cv2.COLOR_RGB2BGR)
+                video_writer.write(frame_bgr)
+
+    # Cleanup video writer
+    if video_writer is not None:
+        video_writer.release()
+        print(f"[INFO] Video saved to {args_cli.video_path}")
 
 
 def main():
