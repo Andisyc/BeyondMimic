@@ -108,14 +108,19 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     if args_cli.record_video:
         import cv2
         import omni.kit.viewport.utility
+        from pathlib import Path
+
+        # Create output directory if it doesn't exist
+        video_path = Path(args_cli.video_path)
+        video_path.parent.mkdir(parents=True, exist_ok=True)
 
         viewport_api = omni.kit.viewport.utility.get_active_viewport()
         render_product = viewport_api.get_render_product_path()
         width, height = viewport_api.get_texture_resolution()
 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        video_writer = cv2.VideoWriter(args_cli.video_path, fourcc, 30, (width, height))
-        print(f"[INFO] Recording video to {args_cli.video_path} ({width}x{height} @ 30fps)")
+        video_writer = cv2.VideoWriter(str(video_path), fourcc, 30, (width, height))
+        print(f"[INFO] Recording video to {video_path} ({width}x{height} @ 30fps)")
 
     # Simulation loop
     while simulation_app.is_running():
