@@ -105,9 +105,11 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
 
     # Video recording setup
     video_writer = None
+    viewport_api = None
     if args_cli.record_video:
         import cv2
         import omni.kit.viewport.utility
+        import omni.replicator.core as rep
         from pathlib import Path
 
         # Create output directory if it doesn't exist
@@ -115,18 +117,32 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         video_path.parent.mkdir(parents=True, exist_ok=True)
 
         viewport_api = omni.kit.viewport.utility.get_active_viewport()
-        render_product = viewport_api.get_render_product_path()
         width, height = viewport_api.get_texture_resolution()
+
+        # Setup replicator for frame capture
+        render_product = rep.create.render_product(viewport_api.get_render_product_path(), (width, height))
+        rgb_annot = rep.AnnotatorRegistry.get_annotator("rgb")
+        rgb_annot.attach(render_product)
 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         video_writer = cv2.VideoWriter(str(video_path), fourcc, 30, (width, height))
         print(f"[INFO] Recording video to {video_path} ({width}x{height} @ 30fps)")
 
     # Simulation loop
+    from tqdm import tqdm
+
+    pbar = tqdm(total=motion.time_step_total, desc="Replaying", unit="frame")
+    frame_count = 0
+
     while simulation_app.is_running():
         time_steps += 1
         reset_ids = time_steps >= motion.time_step_total
+        if reset_ids.any():
+            break  # Stop after one complete loop
         time_steps[reset_ids] = 0
+
+        pbar.update(1)
+        frame_count += 1
 
         root_states = robot.data.default_root_state.clone()
         root_states[:, :3] = motion.body_pos_w[time_steps][:, 0] + scene.env_origins[:, None, :]
@@ -145,19 +161,19 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
 
         # Capture frame for video
         if video_writer is not None:
-            import omni.kit.capture
-
-            capture = omni.kit.capture.CaptureExtension.get_instance()
-            frame_data = capture.capture(render_product)
-            if frame_data is not None:
-                # Convert to BGR for OpenCV
-                frame_bgr = cv2.cvtColor(frame_data, cv2.COLOR_RGB2BGR)
+            frame_data = rgb_annot.get_data()
+            if frame_data is not None and frame_data.size > 0:
+                # Convert RGBA to BGR for OpenCV
+                frame_rgb = frame_data[:, :, :3]  # Drop alpha channel
+                frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
                 video_writer.write(frame_bgr)
+
+    pbar.close()
 
     # Cleanup video writer
     if video_writer is not None:
         video_writer.release()
-        print(f"[INFO] Video saved to {args_cli.video_path}")
+        print(f"[INFO] Video saved to {args_cli.video_path} ({frame_count} frames)")
 
 
 def main():
