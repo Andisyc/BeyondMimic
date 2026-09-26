@@ -18,7 +18,7 @@ parser.add_argument("--disable_fabric", action="store_true", default=False, help
 parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default='Tracking-Flat-G1-v0', help="Name of the task.")
 parser.add_argument("--motion_file", type=str, default='./motion_npz/eight_cut_1_v028.npz', help="Path to the motion file.")
-parser.add_argument("--resume_path", type=str, default='./rsl_rl/g1_23dof_flat/2026-09-26_05-45-55/model_29999.pt')
+parser.add_argument("--resume_path", type=str, default='logs/rsl_rl/g1_23dof_flat/2026-09-26_05-45-55/model_29999.pt')
 
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
@@ -35,6 +35,9 @@ sys.argv = [sys.argv[0]] + hydra_args
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
+
+import logging
+logging.getLogger("isaaclab.utils.math").setLevel(logging.ERROR)
 
 """Rest everything follows."""
 
