@@ -17,8 +17,8 @@ parser.add_argument("--video_length", type=int, default=200, help="Length of the
 parser.add_argument("--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations.")
 parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default='Tracking-Flat-G1-v0', help="Name of the task.")
-parser.add_argument("--motion_file", type=str, default='./motion/wave-single.npz', help="Path to the motion file.")
-parser.add_argument("--resume_path", type=str, default='./rsl_rl/g1_flat/wave-single/model_16000.pt')
+parser.add_argument("--motion_file", type=str, default='./motion_npz/eight_cut_1_v028.npz', help="Path to the motion file.")
+parser.add_argument("--resume_path", type=str, default='./rsl_rl/g1_23dof_flat/2026-09-26_05-45-55/model_29999.pt')
 
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
@@ -40,7 +40,6 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 import os
-import pathlib
 import torch
 
 from rsl_rl.runners import OnPolicyRunner
@@ -54,7 +53,6 @@ from isaaclab.envs import (
 )
 from isaaclab.utils.dict import print_dict
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
-from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
 # Import extensions to set up environment tasks
@@ -68,53 +66,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
 
-    # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
-    log_root_path = os.path.abspath(log_root_path)
-
-    if args_cli.wandb_path:
-        # import wandb
-        # run_path = args_cli.wandb_path
-        # api = wandb.Api()
-        # if "model" in args_cli.wandb_path:
-        #     run_path = "/".join(args_cli.wandb_path.split("/")[:-1])
-        # wandb_run = api.run(run_path)
-
-        # loop over files in the run
-        # files = [file.name for file in wandb_run.files() if "model" in file.name]
-
-        # files are all model_xxx.pt find the largest filename
-        # if "model" in args_cli.wandb_path:
-        #     file = args_cli.wandb_path.split("/")[-1]
-        # else:
-        #     file = max(files, key=lambda x: int(x.split("_")[1].split(".")[0]))
-
-        # wandb_file = wandb_run.file(str(file))
-        # wandb_file.download("./logs/rsl_rl/temp", replace=True)
-
-        # print(f"[INFO]: Loading model checkpoint from: {run_path}/{file}")
-        # resume_path = f"./logs/rsl_rl/temp/{file}"
-
-        # if args_cli.motion_file is not None:
-        #     print(f"[INFO]: Using motion file from CLI: {args_cli.motion_file}")
-        #     env_cfg.commands.motion.motion_file = args_cli.motion_file
-
-        # art = next((a for a in wandb_run.used_artifacts() if a.type == "motions"), None)
-        # if art is None:
-        #     print("[WARN] No model artifact found in the run.")
-        # else:
-        #     env_cfg.commands.motion.motion_file = str(pathlib.Path(art.download()) / "motion.npz")
-
-        resume_path = args_cli.resume_path
-        env_cfg.commands.motion.motion_file = args_cli.motion_file
-        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-
-    else:
-        print(f"[INFO] Loading experiment from directory: {log_root_path}")
-        # resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
-        resume_path = log_root_path + '/wave-single/model_16000.pt'
-        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-        env_cfg.commands.motion.motion_file = args_cli.motion_file
+    # Checkpoint and motion paths are explicit parser inputs.  Do not derive
+    # them from the task's default experiment directory.
+    resume_path = os.path.abspath(args_cli.resume_path)
+    motion_file = os.path.abspath(args_cli.motion_file)
+    env_cfg.commands.motion.motion_file = motion_file
+    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+    print(f"[INFO]: Loading motion file from: {motion_file}")
 
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
@@ -151,7 +109,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     export_motion_policy_as_onnx(
         env.unwrapped,
         ppo_runner.alg.policy,
-        normalizer=ppo_runner.obs_normalizer,
+        normalizer=getattr(ppo_runner, "obs_normalizer", None),
         path=export_model_dir,
         filename="policy.onnx")
     attach_onnx_metadata(env.unwrapped, args_cli.wandb_path if args_cli.wandb_path else "none", export_model_dir)
