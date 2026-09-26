@@ -42,7 +42,7 @@ _build
 
 **/assets/
 artifacts/
-eckpoints/
+checkpoints/
 motion_csv/
 motion_npz/
 video/
