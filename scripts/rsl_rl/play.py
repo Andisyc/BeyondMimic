@@ -35,7 +35,6 @@ sys.argv = [sys.argv[0]] + hydra_args
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
-sys.argv = [sys.argv[0]] + hydra_args
 
 import logging
 logging.getLogger("isaaclab.utils.math").setLevel(logging.ERROR)
