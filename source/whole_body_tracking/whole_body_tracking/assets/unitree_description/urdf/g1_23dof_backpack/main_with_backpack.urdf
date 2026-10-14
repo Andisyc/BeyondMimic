@@ -819,7 +819,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/backpack_link.STL" />
+        <box size="0.19 0.09 0.25" />
       </geometry>
     </collision>
   </link>
