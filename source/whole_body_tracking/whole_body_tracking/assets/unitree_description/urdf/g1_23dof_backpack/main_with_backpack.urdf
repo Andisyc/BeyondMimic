@@ -425,8 +425,8 @@
   </joint>
   <link name="torso_link">
     <inertial>
-      <origin xyz="-0.019981 0.000161 0.153995" rpy="0 0 0" />
-      <mass value="8.680000" />
+      <origin xyz="0.000931 0.000346 0.15082" rpy="0 0 0" />
+      <mass value="6.78" />
       <inertia ixx="0.05905" ixy="3.3302E-05" ixz="-0.0017715" iyy="0.047014" iyz="-2.2399E-05" izz="0.025652" />
     </inertial>
     <visual>
@@ -801,4 +801,4 @@
       </geometry>
     </collision>
   </link>
-<link name="thor_backpack_link"><visual><origin xyz="0 0 0" rpy="0 0 0" /><geometry><mesh filename="meshes/backpack_link.STL" /></geometry></visual></link><joint name="thor_backpack_joint" type="fixed"><origin xyz="-0.094605 -0.0005 0.165324" rpy="0 0 0" /><parent link="torso_link" /><child link="thor_backpack_link" /></joint></robot>
+<link name="thor_backpack_link"><inertial><origin xyz="0 0 0" rpy="0 0 0" /><mass value="1.9" /><inertia ixx="0.015510" ixy="0.000017" ixz="0.000563" iyy="0.010909" iyz="0.000059" izz="0.007288" /></inertial><visual><origin xyz="0 0 0" rpy="0 0 0" /><geometry><mesh filename="meshes/backpack_link.STL" /></geometry></visual><collision><origin xyz="0 0 0" rpy="0 0 0" /><geometry><box size="0.19 0.09 0.25" /></geometry></collision></link><joint name="thor_backpack_joint" type="fixed"><origin xyz="-0.094605 -0.0005 0.165324" rpy="0 0 0" /><parent link="torso_link" /><child link="thor_backpack_link" /></joint></robot>
