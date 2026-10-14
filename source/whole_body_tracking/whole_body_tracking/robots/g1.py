@@ -252,7 +252,7 @@ def _build_action_scale(robot_cfg: ArticulationCfg) -> dict[str, float]:
 G1_ACTION_SCALE = _build_action_scale(G1_CYLINDER_CFG)
 G1_23DOF_ACTION_SCALE = _build_action_scale(G1_23DOF_CYLINDER_CFG)
 
-# 23DoF G1 with thor backpack (compute module mass merged into torso_link)
+# 23DoF G1 with thor backpack (mass merged into torso, backpack as visual-only link)
 G1_23DOF_BACKPACK_CYLINDER_CFG = copy.deepcopy(G1_23DOF_CYLINDER_CFG)
-G1_23DOF_BACKPACK_CYLINDER_CFG.spawn.asset_path = f"{ASSET_DIR}/unitree_description/urdf/g1_23dof_backpack/main_with_backpack_merged.urdf"
+G1_23DOF_BACKPACK_CYLINDER_CFG.spawn.asset_path = f"{ASSET_DIR}/unitree_description/urdf/g1_23dof_backpack/main_with_backpack.urdf"
 G1_23DOF_BACKPACK_ACTION_SCALE = G1_23DOF_ACTION_SCALE
