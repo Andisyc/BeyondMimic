@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from isaaclab.assets import ArticulationCfg
 
-from .g1 import G1_23DOF_CYLINDER_CFG, G1_23DOF_JOINT_NAMES, G1_CYLINDER_CFG
+from .g1 import G1_23DOF_BACKPACK_CYLINDER_CFG, G1_23DOF_CYLINDER_CFG, G1_23DOF_JOINT_NAMES, G1_CYLINDER_CFG
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,9 @@ G1_JOINT_NAMES = (
 ROBOT_PLATFORMS = {
     "g1": RobotPlatformSpec("g1", G1_CYLINDER_CFG, G1_JOINT_NAMES),
     "g1_23dof": RobotPlatformSpec("g1_23dof", G1_23DOF_CYLINDER_CFG, tuple(G1_23DOF_JOINT_NAMES)),
+    "g1_23dof_backpack": RobotPlatformSpec(
+        "g1_23dof_backpack", G1_23DOF_BACKPACK_CYLINDER_CFG, tuple(G1_23DOF_JOINT_NAMES)
+    ),
 }
 
 

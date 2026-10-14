@@ -1,0 +1,66 @@
+{
+  "asset": "G1 Thor backpack, frozen G1 OPT mesh",
+  "mesh_sha256": "f8ad0d2dbcd54111315733deaca32b372353c24998856606c8e7829f5baf0a40",
+  "units": "metres; mass kg; inertia kg*m^2",
+  "mesh_frame": "thor_backpack_link; X forward, Y left, Z up in the source robot",
+  "mount_parent_in_source": "torso_link",
+  "parent_to_backpack": {
+    "xyz_m": [
+      -0.094605,
+      -0.0005,
+      0.165324
+    ],
+    "rpy_rad": [
+      0,
+      0,
+      0
+    ]
+  },
+  "mass_kg": 1.9,
+  "com_in_backpack_frame_m": [
+    0,
+    0,
+    0
+  ],
+  "inertia_tensor_in_backpack_frame_kg_m2": [
+    [
+      0.01551,
+      1.7e-05,
+      0.000563
+    ],
+    [
+      1.7e-05,
+      0.010909,
+      5.9e-05
+    ],
+    [
+      0.000563,
+      5.9e-05,
+      0.007288
+    ]
+  ],
+  "aabb_in_backpack_frame_m": [
+    [
+      -0.04661201685667038,
+      -0.09574338793754578,
+      -0.11825011670589447
+    ],
+    [
+      0.046106770634651184,
+      0.09666117280721664,
+      0.1281280517578125
+    ]
+  ],
+  "dimensions_xyz_m": [
+    0.09271878749132156,
+    0.19240456819534302,
+    0.24637816846370697
+  ],
+  "triangle_count": 21600,
+  "unique_vertices_exact": 10753,
+  "zero_area_triangles": 0,
+  "added_actuated_dof": 0,
+  "material": "Source STL contains no colour or texture; neutral grey in Blender/GLB is a preview material only.",
+  "physics_scope": "Mass and inertia copied from the source robot, not newly measured. USD collision uses convex hull; MuJoCo uses original mesh-contact settings.",
+  "integration_scope": "Independent export validated; recipient 23DOF model and controller have not been loaded or tested."
+}

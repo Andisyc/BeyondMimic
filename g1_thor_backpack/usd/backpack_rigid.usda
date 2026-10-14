@@ -1,0 +1,22 @@
+#usda 1.0
+(
+    defaultPrim = "ThorBackpack"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+def Xform "ThorBackpack" (
+    prepend references = @backpack_visual.usda@
+    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+)
+{
+    point3f physics:centerOfMass = (0, 0, 0)
+    float physics:mass = 1.9
+    float3 physics:diagonalInertia = (0.007248718, 0.010909815, 0.015548467)
+    quatf physics:principalAxes = (0.6826209, -0.0073031248, 0.73072666, 0.0037289674)
+    over "Mesh" (
+        prepend apiSchemas = ["PhysicsCollisionAPI", "PhysicsMeshCollisionAPI"]
+    )
+    {
+        uniform token physics:approximation = "convexHull"
+    }
+}

@@ -1,0 +1,35 @@
+{
+  "original_stl_sha256": "f8ad0d2dbcd54111315733deaca32b372353c24998856606c8e7829f5baf0a40",
+  "original_mesh_triangle_count": 21600,
+  "glb_roundtrip": {
+    "glb_roundtrip_triangle_count": 21600,
+    "aabb_max_error_m": 0.0,
+    "glb_standard": "glTF Y-up on disk; importer restores original Z-up metre frame",
+    "blend_contains_only_backpack_mesh": true
+  },
+  "usd_root_layers_load_and_composition": "passed using usdcat; no original robot references required",
+  "urdf_relative_mesh_files_exist": true,
+  "urdf_helper_preserves_existing_joint_definitions": true,
+  "urdf_helper_source_nonfixed_joint_count": 51,
+  "urdf_helper_output_nonfixed_joint_count": 51,
+  "urdf_helper_added_joint": "fixed",
+  "mujoco_compile": {
+    "mujoco_version": "3.13.0",
+    "nq": 0,
+    "nv": 0,
+    "nu": 0,
+    "bodies": 3,
+    "meshes": 1,
+    "geoms": 2,
+    "backpack_mass_kg": 1.9,
+    "backpack_mount_xyz_m": [
+      -0.094605,
+      -0.0005,
+      0.165324
+    ],
+    "compilation": "passed",
+    "physics_stepping_performed": false
+  },
+  "recipient_23dof_robot_tested": false,
+  "human_preview_review": "Both isolated sides inspected; only the backpack mesh is present."
+}

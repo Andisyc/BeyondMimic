@@ -1,0 +1,7 @@
+<mujocoinclude>
+  <body name="thor_backpack_link" pos="-0.094605 -0.0005 0.165324">
+    <inertial pos="0 0 0" quat="0.999388 0.00780066 -0.0340159 0.0025273" mass="1.9" diaginertia="0.0155485 0.0109098 0.00724872" />
+    <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" mesh="backpack_link" />
+    <geom type="mesh" mesh="backpack_link" solref=".01 1" friction=".8 .005 .0001" />
+  </body>
+</mujocoinclude>

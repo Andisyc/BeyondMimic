@@ -2,6 +2,7 @@ from isaaclab.utils import configclass
 
 from whole_body_tracking.robots.g1 import (
     G1_23DOF_ACTION_SCALE,
+    G1_23DOF_BACKPACK_CYLINDER_CFG,
     G1_23DOF_CYLINDER_CFG,
     G1_ACTION_SCALE,
     G1_CYLINDER_CFG,
@@ -101,6 +102,29 @@ class G1Flat23DoFWoStateEstimationEnvCfg(G1Flat23DoFEnvCfg):
 
 @configclass
 class G1Flat23DoFLowFreqEnvCfg(G1Flat23DoFEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.decimation = round(self.decimation / LOW_FREQ_SCALE)
+        self.rewards.action_rate_l2.weight *= LOW_FREQ_SCALE
+
+
+@configclass
+class G1Flat23DoFBackpackEnvCfg(G1Flat23DoFEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.scene.robot = G1_23DOF_BACKPACK_CYLINDER_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+
+@configclass
+class G1Flat23DoFBackpackWoStateEstimationEnvCfg(G1Flat23DoFBackpackEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.observations.policy.motion_anchor_pos_b = None
+        self.observations.policy.base_lin_vel = None
+
+
+@configclass
+class G1Flat23DoFBackpackLowFreqEnvCfg(G1Flat23DoFBackpackEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.decimation = round(self.decimation / LOW_FREQ_SCALE)

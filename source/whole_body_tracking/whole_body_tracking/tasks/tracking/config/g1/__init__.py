@@ -66,3 +66,33 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1Flat23DoFLowFreqPPORunnerCfg",
     },
 )
+
+gym.register(
+    id="Tracking-Flat-G1-23DoF-Backpack-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": flat_env_cfg.G1Flat23DoFBackpackEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1Flat23DoFPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Tracking-Flat-G1-23DoF-Backpack-Wo-State-Estimation-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": flat_env_cfg.G1Flat23DoFBackpackWoStateEstimationEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1Flat23DoFPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Tracking-Flat-G1-23DoF-Backpack-Low-Freq-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": flat_env_cfg.G1Flat23DoFBackpackLowFreqEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1Flat23DoFLowFreqPPORunnerCfg",
+    },
+)
