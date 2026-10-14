@@ -22,7 +22,7 @@ parser.add_argument(
     "--robot",
     type=str,
     default="g1",
-    choices=("g1", "g1_23dof"),
+    choices=("g1", "g1_23dof", "g1_23dof_backpack"),
     help="Robot platform and canonical joint order used for replay.",
 )
 parser.add_argument(
