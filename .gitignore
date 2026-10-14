@@ -40,7 +40,6 @@ _build
 *.zarr
 *.npz
 
-**/assets/
 artifacts/
 checkpoints/
 motion_csv/
