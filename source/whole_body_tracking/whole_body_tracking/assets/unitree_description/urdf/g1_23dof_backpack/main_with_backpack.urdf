@@ -790,9 +790,9 @@
       </geometry>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <origin xyz="-0.000253 0.000459 0.004939" rpy="0 0 0"/>
       <geometry>
-        <box size="0.19 0.09 0.25"/>
+        <box size="0.092719 0.192405 0.246378"/>
       </geometry>
     </collision>
   </link>

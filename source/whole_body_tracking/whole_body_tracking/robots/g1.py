@@ -255,4 +255,6 @@ G1_23DOF_ACTION_SCALE = _build_action_scale(G1_23DOF_CYLINDER_CFG)
 # 23DoF G1 with thor backpack (compute module mounted on torso)
 G1_23DOF_BACKPACK_CYLINDER_CFG = copy.deepcopy(G1_23DOF_CYLINDER_CFG)
 G1_23DOF_BACKPACK_CYLINDER_CFG.spawn.asset_path = f"{ASSET_DIR}/unitree_description/urdf/g1_23dof_backpack/main_with_backpack.urdf"
+G1_23DOF_BACKPACK_CYLINDER_CFG.spawn.merge_fixed_joints = False
+G1_23DOF_BACKPACK_CYLINDER_CFG.spawn.force_usd_conversion = True
 G1_23DOF_BACKPACK_ACTION_SCALE = G1_23DOF_ACTION_SCALE
